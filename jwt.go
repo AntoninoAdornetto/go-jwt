@@ -40,3 +40,66 @@ func New[C RegisteredClaims | MP](alg string, key []byte) (*JWT[C], error) {
 	}, nil
 }
 
+func (j *JWT[C]) Sign(claims C) (string, error) {
+	j.Claims = claims
+	unsigned, err := j.signInput()
+	if err != nil {
+		return "", err
+	}
+
+	sig, err := j.Signer.Sign(unsigned)
+	if err != nil {
+		return "", err
+	}
+
+	encodedSig := encode(sig)
+	return unsigned + "." + encodedSig, nil
+}
+func (j *JWT[C]) signInput() (string, error) {
+	var err error
+
+	segments := make([]string, 2)
+	for i := range segments {
+		var jsonEnc []byte
+
+		if i == 0 {
+			if jsonEnc, err = json.Marshal(j.Header); err != nil {
+				return "", err
+			}
+		} else {
+			if jsonEnc, err = json.Marshal(j.Claims); err != nil {
+				return "", err
+			}
+		}
+
+		segments[i] = encode(jsonEnc)
+	}
+
+	return strings.Join(segments, "."), nil
+}
+
+func (j *JWT[C]) extract(segments []string) error {
+	for i := range 2 {
+		dec, err := decode(segments[i])
+		if err != nil {
+			return err
+		}
+
+		if i == 0 {
+			if err = json.Unmarshal(dec, &j.Header); err != nil {
+				return err
+			}
+		} else {
+			if err = json.Unmarshal(dec, &j.Claims); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func encode(segment []byte) string {
+	return base64.RawURLEncoding.EncodeToString(segment)
+}
+

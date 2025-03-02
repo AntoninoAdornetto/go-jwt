@@ -25,3 +25,18 @@ type RegisteredClaims struct {
 
 type MP map[string]any
 
+func New[C RegisteredClaims | MP](alg string, key []byte) (*JWT[C], error) {
+	signer, err := NewTokenSigner(alg, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return &JWT[C]{
+		Header: Header{
+			Alg: alg,
+			Typ: "JWT",
+		},
+		Signer: signer,
+	}, nil
+}
+

@@ -1,5 +1,12 @@
 package jwt
 
+import (
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"strings"
+)
+
 type JWT[C RegisteredClaims | MP] struct {
 	Claims    C
 	Header    Header
@@ -55,6 +62,39 @@ func (j *JWT[C]) Sign(claims C) (string, error) {
 	encodedSig := encode(sig)
 	return unsigned + "." + encodedSig, nil
 }
+
+func Parse[C RegisteredClaims | MP](token, alg string, key []byte, payload C) (*JWT[C], error) {
+	var err error
+
+	signer, err := NewTokenSigner(alg, key)
+	if err != nil {
+		return nil, err
+	}
+
+	jwt := JWT[C]{Signer: signer}
+
+	segments := strings.Split(token, ".")
+	if len(segments) != 3 {
+		return nil, errors.New("malformed token")
+	}
+
+	if err = jwt.extract(segments[0:2]); err != nil {
+		return nil, err
+	}
+
+	signingInput := strings.Join(segments[0:2], ".")
+	sig, err := decode(segments[2])
+	if err != nil {
+		return nil, err
+	}
+
+	if err = jwt.Signer.Equal(signingInput, sig); err != nil {
+		return nil, err
+	}
+
+	return &jwt, nil
+}
+
 func (j *JWT[C]) signInput() (string, error) {
 	var err error
 
@@ -103,3 +143,6 @@ func encode(segment []byte) string {
 	return base64.RawURLEncoding.EncodeToString(segment)
 }
 
+func decode(segment string) ([]byte, error) {
+	return base64.RawURLEncoding.DecodeString(segment)
+}

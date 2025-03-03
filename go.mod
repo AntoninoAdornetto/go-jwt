@@ -1,3 +1,3 @@
-module github.com/AntoninoAdornetto/jwt
+module github.com/AntoninoAdornetto/go-jwt
 
 go 1.23.1

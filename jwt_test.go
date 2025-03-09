@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/AntoninoAdornetto/jwt"
+	"github.com/AntoninoAdornetto/go-jwt"
 )
 
 var (
